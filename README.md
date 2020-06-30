@@ -23,3 +23,11 @@ input
 $ Buildings Coordinates$ : $ [[[4,0],[4,-5],[7,-5],[7,0]], [[0.4,-2],[0.4,-5],[2.5,-5],[2.5,-2]]] $
 $ S $: $ [-3.5,1] $
 Output : to be calculated
+
+provide->
+input1:buildingCoords[size][4][2]
+input2:source[2]
+
+call->
+requiredLength=getExposedLength(size, buildingCoords, source);
+
