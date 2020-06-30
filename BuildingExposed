@@ -1,0 +1,168 @@
+float getLength(int n, float building[][4][2], int index, float source[2], float angle[2], bool flag, bool leftExpo){
+	float exposedLength=0;
+	for(int i=index; !leftExpo&&i<n || leftExpo&&i>=0; leftExpo?i--:i++){//traverses towards left or right on the Array based on leftExpo
+		float xStart=building[i][0][0], xEnd=building[i][2][0], yUp=building[i][0][1], yDown=building[i][2][1];
+		if(leftExpo){
+			swap(xStart, xEnd);
+		}//xEnd is now start and xStart is now end due to direction of light
+		if(flag){//light interception is horizontal to x-axis
+			if(yUp<source[1]){
+			}
+			else if(yUp>source[1]){
+				exposedLength+=(yUp-source[1]);
+				angle[0]=source[0]-xStart;
+				angle[1]=source[1]-yUp;	
+				flag=false;	//no more horizontal lights
+			}
+			else{
+				exposedLength+=(!leftExpo?xEnd-xStart:xStart-xEnd);//still horizontal lights
+			}
+			continue;
+		}
+		float yIcptCord=((xStart-source[0])*angle[1])/angle[0]+source[1];//calculation for y coordinate of intercepted light ray on the building due previous 
+			//building intercepted the light source at the angle represented by angle[2]
+		if(yIcptCord<yDown){
+			yIcptCord=yDown;
+		}
+		if(yIcptCord<yUp){//light rays falls upon left of the building
+			exposedLength+=(yUp-yIcptCord);
+			if(yUp>source[1]){
+				angle[0]=source[0]-xStart;
+				angle[1]=source[1]-yUp;	
+			}
+			else if(yUp<source[1]){
+				exposedLength+=(!leftExpo?xEnd-xStart:xStart-xEnd);
+				angle[0]=source[0]-xEnd;
+				angle[1]=source[1]-yUp;	
+			}
+			else{
+				exposedLength+=(!leftExpo?xEnd-xStart:xStart-xEnd);
+				flag=true;
+			}
+		}
+		else{//light rays do not fall upon left of the building
+			if(yUp>source[1]){//left corner will intercept the light
+				angle[0]=source[0]-xStart;
+				angle[1]=source[1]-yUp;	
+			}
+			else if(yUp<source[1]){//right corner of building will intercept the light in case of source light is on left and vice versa
+				float xIcptCord=((yUp-source[1])*angle[0])/angle[1]+source[0];//calculation for x coordinate of intercepted light ray on the roof of building due previous
+			//building intercepted the light source at the angle represented by angle[2]
+				if(!leftExpo && xIcptCord>xStart && xIcptCord<xEnd || leftExpo && xIcptCord>xEnd && xIcptCord<xStart) {
+					exposedLength+=(!leftExpo?xEnd-xIcptCord:xIcptCord-xEnd);
+					angle[0]=source[0]-xEnd;
+					angle[1]=source[1]-yUp;	
+				}
+			}
+			else{
+				flag=true;
+			}
+		}
+	}
+	return exposedLength;
+}
+
+pair<int, int> getLengthAndAngle(float building[][4][2], int index, float &exposedLength, float angleL[2], float angleR[2], float source[2], bool &flagL, bool &flagR, int n){
+	float xStart=building[index][0][0], xEnd=building[index][2][0], yUp=building[index][0][1], yDown=building[index][2][1];
+	pair<int, int> leftRightStarts=make_pair(index-1, index+1);
+	if(index<0){//no buildings on left of source at all
+		angleR[0]=source[0]-building[index+1][1][0];
+		angleR[1]=source[1]-building[index+1][1][1];
+		return leftRightStarts;
+	}
+	if(source[0]>xStart && source[0]<xEnd){
+		if(source[1]>yUp){//source light is just on the above of the building
+			exposedLength+=xEnd-xStart;
+			angleL[0]=source[0]-xStart;
+			angleL[1]=source[1]-yUp;
+			angleR[0]=source[0]-xEnd;
+			angleR[1]=source[1]-yUp;
+		}
+		else{//source light is at the roof of the building
+			exposedLength+=xEnd-xStart;
+			flagL=true;
+			flagR=true;
+		}
+	}
+	else if(source[0]<xEnd){
+		if(source[1]>yUp){//source light is just on the above of the left corner of the building
+			exposedLength+=xEnd-xStart+yUp-yDown;
+			angleR[0]=source[0]-xEnd;
+			angleR[1]=source[1]-yUp;
+		}
+		else if(source[1]<yUp){//source light is attached on the left of the building
+			exposedLength+=yUp-yDown;
+			leftRightStarts.second=n;//light is blocked to all the building that comes to the right of the building(index)
+		}
+		else{//source light is the left corner of the building
+			exposedLength+=xEnd-xStart+yUp-yDown;
+			flagR=true;
+		}
+		if(index!=0){//setting default angle of interception on its left building as if no light interception happened
+			angleL[0]=source[0]-building[index-1][2][0];
+			angleL[1]=source[1]-building[index-1][2][1];	
+		}
+	}
+	else if(source[0]>xEnd){//the source light is in the middle of the building at index and at index+1
+		leftRightStarts.first=index;
+		angleL[0]=source[0]-xEnd;
+		angleL[1]=source[1]-yDown;
+		if(index!=n-1){
+			angleR[0]=source[0]-building[index+1][1][0];
+			angleR[1]=source[1]-building[index+1][1][1];
+		}
+	}//so setting default angle of intercetion of the building at the left and the right of source as if no light interception happened
+	else{
+		if(source[1]>yUp){//source light is just on the above of the right corner of the building(index)
+			exposedLength+=xEnd-xStart+yUp-yDown;
+			angleL[0]=source[0]-xStart;
+			angleL[1]=source[1]-yUp;
+		}
+		else if(source[1]<yUp){//source light is attached on the right of the building(index)
+			exposedLength+=yUp-yDown;
+			leftRightStarts.first=-1;//light is blocked to all the building that comes to the left of the building(index)
+		}
+		else{//source light is the right corner of the building(index)
+			exposedLength+=xEnd-xStart+yUp-yDown;
+			flagL=true;
+		}
+		if(index!=n-1){//setting default angle of interception of the building at the right of source as if no light interception happened
+			angleR[0]=source[0]-building[index+1][1][0];
+			angleR[1]=source[1]-building[index+1][1][1];
+		}
+	}
+	return leftRightStarts;
+}
+//the function is also calculating the exposure of the length of the building if the light source 
+//just happens to be at its above, or attached on left or on right...
+//this function caculates the intereption of light to the left building or the right building due to the building(index) mentioned above..
+void mySort(float builds[][4][2], int n){
+	for(int i=0; i<n-1; i++){
+		for(int j=i+1; j<n; j++){
+			if(builds[j][0][0]<builds[i][0][0]){
+				for(int k=0; k<4; k++){
+					swap(builds[i][k][0], builds[j][k][0]);
+					swap(builds[i][k][1], builds[j][k][1]);
+				}
+			}
+		}
+	}
+}
+
+float getExposedLength(int n, float building[][4][2], float source[2]){
+	mySort(building, n);//sorting the building coords on their occurance on x-axis
+	float exposedLength=0;
+	int rightOfSource;//the index of the first building that comes right of the source light
+	float angleL[2], angleR[2];//storing angle of interception on the left and right side of light respectively
+	bool flagL=false, flagR=false;//indicates the the light has been intercepted by the building and can be seen only horizontal to x-axis
+	pair<int, int> leftRightStarts=make_pair(n-1, n);//first(index)=first building towards left and second(index)=second building towards right
+	for(rightOfSource=0; rightOfSource<n; rightOfSource++){
+		if(building[rightOfSource][0][0]>source[0]){
+			break;
+		}
+	}
+	leftRightStarts=getLengthAndAngle(building, rightOfSource-1, exposedLength, angleL, angleR, source, flagL, flagR, n);
+	return getLength(n, building, leftRightStarts.first, source, angleL, flagL, true)
+		   + getLength(n, building, leftRightStarts.second, source, angleR, flagR, false)
+		   + exposedLength;
+}
